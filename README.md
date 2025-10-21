@@ -8,10 +8,13 @@ En Next.js-app som hämtar klimathändelser från [klimatkalendern.nu](https://k
 ## Features
 
 - **Automatisk stadsdetektering** - Använder IP-geolocation för att automatiskt välja användarens stad
-- **Filtrering per stad** - Visar endast klimathändelser för vald svensk stad
-- **Kalenderintegration** - Genererar ICS-filer som kan prenumereras på i Google Calendar, Outlook, Apple Calendar, etc.
+- **Smart stadsfiltrering** - Visar endast klimathändelser för vald stad med ordgräns-matchning (undviker felaktiga delträffar)
+- **Storstadsområden** - Stockholm inkluderar 26 kommuner (Solna, Lidingö, Södertälje, etc.), Göteborg inkluderar 10 kommuner, Malmö inkluderar 7 kommuner
+- **Kalenderintegration** - Genererar RFC 5545-kompatibla ICS-filer som kan prenumereras på i Google Calendar, Outlook, Apple Calendar, etc.
 - **Automatiska uppdateringar** - Kalendern uppdateras automatiskt med nya händelser från originalkällan
-- **Pedagogiska instruktioner** - Steg-för-steg guide för att lägga till kalendern i olika appar
+- **Robust felhantering** - Fallback-cache (2 veckor) om originalkällan är otillgänglig
+- **Stöd för återkommande events** - Bevarar RRULE för veckovisa/månatliga händelser
+- **Pedagogiska instruktioner** - Steg-för-steg guide för att lägga till kalendern i olika appar (Google, iPhone, Outlook)
 - **Responsiv design** - Fungerar på desktop, tablet och mobil
 
 ## Hur det fungerar
@@ -106,7 +109,9 @@ Hämtar lista över alla tillgängliga svenska städer från ICS-filen.
 **Response:**
 \`\`\`json
 {
-  "cities": ["Stockholm", "Göteborg", "Malmö", ...]
+  "cities": ["Stockholm", "Göteborg", "Kristianstad", "Västerås", "Lund", ...],
+  "totalEvents": 316,
+  "lastUpdated": "2025-10-21T05:17:09.960Z"
 }
 \`\`\`
 
@@ -176,9 +181,22 @@ npm run dev
 # Kör scripts/inspect-ics.ts från v0 UI
 \`\`\`
 
-### Lägg till fler städer
+### Tillgängliga städer
 
-Städer extraheras automatiskt från ICS-filen. För att lägga till manuella städer, uppdatera `SWEDISH_CITIES` i `lib/ics-parser.ts`.
+Appen filtrerar events för **14 svenska städer** som har klimathändelser:
+
+- **Stockholm** (138 events, inkl. 26 kommuner: Solna, Lidingö, Nacka, Södertälje, m.fl.)
+- **Göteborg** (25 events, inkl. 10 kommuner: Mölndal, Partille, Kungälv, m.fl.)
+- **Kristianstad** (13 events)
+- **Västerås** (10 events)
+- **Lund** (10 events)
+- **Uppsala** (5 events)
+- **Karlskrona** (5 events)
+- **Karlstad** (4 events)
+- **Norrköping, Linköping, Nyköping** (3 events vardera)
+- **Kalmar, Gnesta, Falun** (2 events vardera)
+
+För att lägga till fler städer eller ändra alias, uppdatera `SWEDISH_CITIES` och `CITY_ALIASES` i `lib/ics-parser.ts`.
 
 ### Ändra cache-tid
 

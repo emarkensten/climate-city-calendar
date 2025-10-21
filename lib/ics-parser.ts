@@ -6,6 +6,9 @@ export interface CalendarEvent {
   start: Date
   end: Date
   url?: string
+  isAllDay?: boolean
+  rrule?: string
+  dtstamp?: Date
 }
 
 export interface ParsedCalendar {
@@ -13,49 +16,79 @@ export interface ParsedCalendar {
   cities: string[]
 }
 
-// List of major Swedish cities to match against
+// List of Swedish cities that actually have climate events
 const SWEDISH_CITIES = [
   "Stockholm",
   "Göteborg",
-  "Malmö",
-  "Uppsala",
-  "Västerås",
-  "Örebro",
-  "Linköping",
-  "Helsingborg",
-  "Jönköping",
-  "Norrköping",
-  "Lund",
-  "Umeå",
-  "Gävle",
-  "Borås",
-  "Södertälje",
-  "Eskilstuna",
-  "Karlstad",
-  "Täby",
-  "Växjö",
-  "Halmstad",
-  "Sundsvall",
-  "Luleå",
-  "Trollhättan",
-  "Östersund",
-  "Borlänge",
-  "Falun",
-  "Kalmar",
   "Kristianstad",
+  "Västerås",
+  "Lund",
+  "Uppsala",
   "Karlskrona",
-  "Skellefteå",
-  "Uddevalla",
-  "Lidingö",
-  "Landskrona",
+  "Karlstad",
+  "Norrköping",
+  "Linköping",
   "Nyköping",
-  "Motala",
-  "Varberg",
-  "Trelleborg",
-  "Örnsköldsvik",
-  "Skövde",
-  "Ängelholm",
+  "Kalmar",
+  "Gnesta",
+  "Falun",
 ]
+
+// City aliases - suburbs/neighboring municipalities that should be included in main city results
+// Based on official län/county municipalities lists
+const CITY_ALIASES: Record<string, string[]> = {
+  // Stockholm County (Stockholms län) - 26 municipalities
+  Stockholm: [
+    "Solna",
+    "Sundbyberg",
+    "Lidingö",
+    "Nacka",
+    "Huddinge",
+    "Botkyrka",
+    "Haninge",
+    "Tyresö",
+    "Järfälla",
+    "Sollentuna",
+    "Täby",
+    "Danderyd",
+    "Värmdö",
+    "Österåker",
+    "Sigtuna",
+    "Upplands Väsby",
+    "Upplands-Bro",
+    "Norrtälje",
+    "Nynäshamn",
+    "Södertälje",
+    "Ekerö",
+    "Salem",
+    "Vaxholm",
+    "Nykvarn",
+    "Vallentuna",
+  ],
+  // Göteborg and nearest suburbs in Västra Götalands län (49 municipalities)
+  Göteborg: [
+    "Mölndal",
+    "Partille",
+    "Härryda",
+    "Kungälv",
+    "Ale",
+    "Lerum",
+    "Öckerö",
+    "Stenungsund",
+    "Tjörn",
+    "Götene",
+  ],
+  // Malmö and nearest suburbs in Skåne län (33 municipalities)
+  Malmö: [
+    "Burlöv",
+    "Lomma",
+    "Staffanstorp",
+    "Svedala",
+    "Vellinge",
+    "Kävlinge",
+    "Lund", // Note: Lund has its own events but is also a Malmö suburb
+  ],
+}
 
 export function parseICS(icsContent: string): ParsedCalendar {
   const events: CalendarEvent[] = []
@@ -99,8 +132,25 @@ export function parseICS(icsContent: string): ParsedCalendar {
       processField(event, currentField, currentValue)
     }
 
-    // Only add complete events
-    if (event.uid && event.summary && event.start) {
+    // Validate and only add complete, valid events
+    if (event.uid && event.summary && event.start && event.end) {
+      // Validate that dates are valid
+      if (isNaN(event.start.getTime()) || isNaN(event.end.getTime())) {
+        console.warn(`[ICS Parser] Invalid dates for event: ${event.uid}`)
+        continue
+      }
+
+      // Validate that start is before end
+      if (event.start >= event.end) {
+        console.warn(`[ICS Parser] Start date after end date for event: ${event.uid}`)
+        continue
+      }
+
+      // Add DTSTAMP if missing (use current time)
+      if (!event.dtstamp) {
+        event.dtstamp = new Date()
+      }
+
       events.push(event as CalendarEvent)
 
       // Extract cities from location, summary, and description
@@ -138,6 +188,8 @@ function processField(event: Partial<CalendarEvent>, field: string, value: strin
       event.location = unescapeICS(value)
       break
     case "DTSTART":
+      // Check if this is an all-day event (VALUE=DATE parameter)
+      event.isAllDay = field.includes("VALUE=DATE")
       event.start = parseICSDate(value)
       break
     case "DTEND":
@@ -145,6 +197,12 @@ function processField(event: Partial<CalendarEvent>, field: string, value: strin
       break
     case "URL":
       event.url = value
+      break
+    case "RRULE":
+      event.rrule = value
+      break
+    case "DTSTAMP":
+      event.dtstamp = parseICSDate(value)
       break
   }
 }
@@ -163,7 +221,9 @@ function parseICSDate(dateString: string): Date {
     return new Date(Date.UTC(year, month, day, hour, minute, second))
   }
 
-  return new Date(year, month, day)
+  // For all-day events (YYYYMMDD), create UTC midnight to preserve the date
+  // This prevents timezone shifts from changing the actual date
+  return new Date(Date.UTC(year, month, day, 0, 0, 0))
 }
 
 function unescapeICS(text: string): string {
@@ -172,13 +232,27 @@ function unescapeICS(text: string): string {
 
 export function filterEventsByCity(events: CalendarEvent[], city: string): CalendarEvent[] {
   const cityLower = city.toLowerCase()
+
+  // Get all city name variations (main city + suburbs/aliases)
+  const cityVariations = [city]
+  const aliases = CITY_ALIASES[city]
+  if (aliases && aliases.length > 0) {
+    cityVariations.push(...aliases)
+  }
+
+  // Create regex pattern matching any of the city variations
+  // Escape special regex characters and use word boundaries to avoid partial matches
+  const escapedCities = cityVariations.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  const cityPattern = escapedCities.join("|")
+  const cityRegex = new RegExp(`\\b(${cityPattern})\\b`, "i")
+
   return events.filter((event) => {
-    const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`.toLowerCase()
-    return searchText.includes(cityLower)
+    const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
+    return cityRegex.test(searchText)
   })
 }
 
-export function generateICS(events: CalendarEvent[], calendarName: string): string {
+export function generateICS(events: CalendarEvent[], calendarName: string, citySlug?: string): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -191,7 +265,15 @@ export function generateICS(events: CalendarEvent[], calendarName: string): stri
 
   for (const event of events) {
     lines.push("BEGIN:VEVENT")
-    lines.push(`UID:${event.uid}`)
+
+    // Generate unique UID to avoid conflicts with original calendar
+    const uniqueUID = citySlug ? `${event.uid}-filtered-${citySlug}` : event.uid
+    lines.push(`UID:${uniqueUID}`)
+
+    // DTSTAMP is required by RFC 5545
+    const dtstamp = event.dtstamp || new Date()
+    lines.push(`DTSTAMP:${formatICSDate(dtstamp)}`)
+
     lines.push(`SUMMARY:${escapeICS(event.summary)}`)
 
     if (event.description) {
@@ -202,12 +284,29 @@ export function generateICS(events: CalendarEvent[], calendarName: string): stri
       lines.push(`LOCATION:${escapeICS(event.location)}`)
     }
 
-    lines.push(`DTSTART:${formatICSDate(event.start)}`)
-    lines.push(`DTEND:${formatICSDate(event.end)}`)
+    // Format dates correctly for all-day vs timed events
+    if (event.isAllDay) {
+      lines.push(`DTSTART;VALUE=DATE:${formatICSDate(event.start, true)}`)
+      lines.push(`DTEND;VALUE=DATE:${formatICSDate(event.end, true)}`)
+    } else {
+      lines.push(`DTSTART:${formatICSDate(event.start)}`)
+      lines.push(`DTEND:${formatICSDate(event.end)}`)
+    }
 
     if (event.url) {
       lines.push(`URL:${event.url}`)
     }
+
+    // Preserve recurring event rules
+    if (event.rrule) {
+      lines.push(`RRULE:${event.rrule}`)
+    }
+
+    // Add status field (recommended)
+    lines.push("STATUS:CONFIRMED")
+
+    // Add sequence number (for event updates)
+    lines.push("SEQUENCE:0")
 
     lines.push("END:VEVENT")
   }
@@ -217,10 +316,16 @@ export function generateICS(events: CalendarEvent[], calendarName: string): stri
   return lines.join("\r\n")
 }
 
-function formatICSDate(date: Date): string {
+function formatICSDate(date: Date, isAllDay = false): string {
   const year = date.getUTCFullYear()
   const month = String(date.getUTCMonth() + 1).padStart(2, "0")
   const day = String(date.getUTCDate()).padStart(2, "0")
+
+  if (isAllDay) {
+    // All-day events use VALUE=DATE format (YYYYMMDD)
+    return `${year}${month}${day}`
+  }
+
   const hour = String(date.getUTCHours()).padStart(2, "0")
   const minute = String(date.getUTCMinutes()).padStart(2, "0")
   const second = String(date.getUTCSeconds()).padStart(2, "0")
