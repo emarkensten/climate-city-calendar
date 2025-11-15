@@ -31,52 +31,10 @@ export default async function Image() {
             gap: 20,
           }}
         >
-          {/* Calendar icon */}
-          <div
-            style={{
-              width: 180,
-              height: 180,
-              backgroundColor: 'white',
-              borderRadius: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <div
-              style={{
-                height: 50,
-                backgroundColor: '#047857',
-                display: 'flex',
-              }}
-            />
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                padding: 20,
-                gap: 10,
-              }}
-            >
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1, height: 15, backgroundColor: '#10b981', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#10b981', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#10b981', borderRadius: 4 }} />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-                <div style={{ flex: 1, height: 15, backgroundColor: '#d1fae5', borderRadius: 4 }} />
-              </div>
-            </div>
-          </div>
+          {/* Logo */}
+          <svg width="200" height="200" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M460.8 76.8C460.8 163.28 399.52 235.44 318.08 252.32C311.76 205.84 290.88 164 260.08 131.6C292.16 83.2 347.12 51.2 409.6 51.2H435.2C449.36 51.2 460.8 62.64 460.8 76.8ZM51.2 128C51.2 113.84 62.64 102.4 76.8 102.4H102.4C201.36 102.4 281.6 182.64 281.6 281.6V435.2C281.6 449.36 270.16 460.8 256 460.8C241.84 460.8 230.4 449.36 230.4 435.2V307.2C131.44 307.2 51.2 226.96 51.2 128Z" fill="white"/>
+          </svg>
 
           {/* Title */}
           <div
