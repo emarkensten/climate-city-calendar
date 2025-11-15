@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { Calendar, Download, Loader2, MapPin, Copy, Check } from "lucide-react"
+import { Download, Loader2, MapPin, Copy, Check } from "lucide-react"
 
 export default function Home() {
   const [cities, setCities] = useState<string[]>([])
@@ -101,8 +101,8 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16 max-w-3xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Calendar className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/icon.svg" alt="Klimatkalendern logo" className="w-20 h-20" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-3 text-balance">Klimatkalendern för din stad</h1>
           <p className="text-lg text-muted-foreground text-pretty">
