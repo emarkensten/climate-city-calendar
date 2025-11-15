@@ -263,67 +263,78 @@ export function filterEventsByCity(events: CalendarEvent[], city: string): Calen
 }
 
 export function generateICS(events: CalendarEvent[], calendarName: string, citySlug?: string): string {
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Klimatkalendern//City Filter//SV",
-    `X-WR-CALNAME:${escapeICS(calendarName)}`,
-    "X-WR-TIMEZONE:Europe/Stockholm",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-  ]
+  try {
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Klimatkalendern//City Filter//SV",
+      `X-WR-CALNAME:${escapeICS(calendarName)}`,
+      "X-WR-TIMEZONE:Europe/Stockholm",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+    ]
 
-  for (const event of events) {
-    lines.push("BEGIN:VEVENT")
+    for (const event of events) {
+      try {
+        lines.push("BEGIN:VEVENT")
 
-    // Generate unique UID to avoid conflicts with original calendar
-    const uniqueUID = citySlug ? `${event.uid}-filtered-${citySlug}` : event.uid
-    lines.push(`UID:${uniqueUID}`)
+        // Generate unique UID to avoid conflicts with original calendar
+        const uniqueUID = citySlug ? `${event.uid}-filtered-${citySlug}` : event.uid
+        lines.push(`UID:${uniqueUID}`)
 
-    // DTSTAMP is required by RFC 5545
-    const dtstamp = event.dtstamp || new Date()
-    lines.push(`DTSTAMP:${formatICSDate(dtstamp)}`)
+        // DTSTAMP is required by RFC 5545
+        const dtstamp = event.dtstamp || new Date()
+        lines.push(`DTSTAMP:${formatICSDate(dtstamp)}`)
 
-    lines.push(`SUMMARY:${escapeICS(event.summary)}`)
+        lines.push(`SUMMARY:${escapeICS(event.summary)}`)
 
-    if (event.description) {
-      lines.push(`DESCRIPTION:${escapeICS(event.description)}`)
+        if (event.description) {
+          lines.push(`DESCRIPTION:${escapeICS(event.description)}`)
+        }
+
+        if (event.location) {
+          lines.push(`LOCATION:${escapeICS(event.location)}`)
+        }
+
+        // Format dates correctly for all-day vs timed events
+        if (event.isAllDay) {
+          lines.push(`DTSTART;VALUE=DATE:${formatICSDate(event.start, true)}`)
+          lines.push(`DTEND;VALUE=DATE:${formatICSDate(event.end, true)}`)
+        } else {
+          lines.push(`DTSTART:${formatICSDate(event.start)}`)
+          lines.push(`DTEND:${formatICSDate(event.end)}`)
+        }
+
+        if (event.url) {
+          lines.push(`URL:${event.url}`)
+        }
+
+        // Preserve recurring event rules
+        if (event.rrule) {
+          lines.push(`RRULE:${event.rrule}`)
+        }
+
+        // Add status field (recommended)
+        lines.push("STATUS:CONFIRMED")
+
+        // Add sequence number (for event updates)
+        lines.push("SEQUENCE:0")
+
+        lines.push("END:VEVENT")
+      } catch (eventError) {
+        console.error(`[generateICS] Error processing event "${event.summary}":`, eventError)
+        // Skip this event and continue with others
+        continue
+      }
     }
 
-    if (event.location) {
-      lines.push(`LOCATION:${escapeICS(event.location)}`)
-    }
+    lines.push("END:VCALENDAR")
 
-    // Format dates correctly for all-day vs timed events
-    if (event.isAllDay) {
-      lines.push(`DTSTART;VALUE=DATE:${formatICSDate(event.start, true)}`)
-      lines.push(`DTEND;VALUE=DATE:${formatICSDate(event.end, true)}`)
-    } else {
-      lines.push(`DTSTART:${formatICSDate(event.start)}`)
-      lines.push(`DTEND:${formatICSDate(event.end)}`)
-    }
-
-    if (event.url) {
-      lines.push(`URL:${event.url}`)
-    }
-
-    // Preserve recurring event rules
-    if (event.rrule) {
-      lines.push(`RRULE:${event.rrule}`)
-    }
-
-    // Add status field (recommended)
-    lines.push("STATUS:CONFIRMED")
-
-    // Add sequence number (for event updates)
-    lines.push("SEQUENCE:0")
-
-    lines.push("END:VEVENT")
+    return lines.join("\r\n")
+  } catch (error) {
+    console.error("[generateICS] Fatal error generating ICS:", error)
+    throw error
   }
-
-  lines.push("END:VCALENDAR")
-
-  return lines.join("\r\n")
 }
 
 function formatICSDate(date: Date, isAllDay = false): string {
