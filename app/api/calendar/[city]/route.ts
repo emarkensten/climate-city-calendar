@@ -14,7 +14,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
     console.log(`[Calendar API] Request for city: "${city}"`)
     const decodedCity = decodeURIComponent(city)
     console.log(`[Calendar API] Decoded city: "${decodedCity}"`)
-    const citySlug = decodedCity.toLowerCase().replace(/\s+/g, "-")
+    // Normalize city slug to ASCII-safe characters (å→a, ä→a, ö→o)
+    const citySlug = decodedCity
+      .toLowerCase()
+      .replace(/å/g, "a")
+      .replace(/ä/g, "a")
+      .replace(/ö/g, "o")
+      .replace(/\s+/g, "-")
     console.log(`[Calendar API] City slug: "${citySlug}"`)
 
     let icsContent: string
