@@ -231,25 +231,35 @@ function unescapeICS(text: string): string {
 }
 
 export function filterEventsByCity(events: CalendarEvent[], city: string): CalendarEvent[] {
-  const cityLower = city.toLowerCase()
+  try {
+    const cityLower = city.toLowerCase()
 
-  // Get all city name variations (main city + suburbs/aliases)
-  const cityVariations = [city]
-  const aliases = CITY_ALIASES[city]
-  if (aliases && aliases.length > 0) {
-    cityVariations.push(...aliases)
+    // Get all city name variations (main city + suburbs/aliases)
+    const cityVariations = [city]
+    const aliases = CITY_ALIASES[city]
+    if (aliases && aliases.length > 0) {
+      cityVariations.push(...aliases)
+    }
+
+    // Create regex pattern matching any of the city variations
+    // Escape special regex characters and use word boundaries to avoid partial matches
+    const escapedCities = cityVariations.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    const cityPattern = escapedCities.join("|")
+    const cityRegex = new RegExp(`\\b(${cityPattern})\\b`, "i")
+
+    return events.filter((event) => {
+      const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
+      return cityRegex.test(searchText)
+    })
+  } catch (error) {
+    console.error(`[filterEventsByCity] Error filtering events for city "${city}":`, error)
+    // Fallback to simple case-insensitive includes check
+    const cityLower = city.toLowerCase()
+    return events.filter((event) => {
+      const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`.toLowerCase()
+      return searchText.includes(cityLower)
+    })
   }
-
-  // Create regex pattern matching any of the city variations
-  // Escape special regex characters and use word boundaries to avoid partial matches
-  const escapedCities = cityVariations.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-  const cityPattern = escapedCities.join("|")
-  const cityRegex = new RegExp(`\\b(${cityPattern})\\b`, "i")
-
-  return events.filter((event) => {
-    const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
-    return cityRegex.test(searchText)
-  })
 }
 
 export function generateICS(events: CalendarEvent[], calendarName: string, citySlug?: string): string {

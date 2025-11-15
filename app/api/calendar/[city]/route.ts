@@ -11,8 +11,11 @@ let lastKnownGoodData: { icsContent: string; timestamp: number } | null = null
 export async function GET(request: Request, { params }: { params: Promise<{ city: string }> }) {
   try {
     const { city } = await params
+    console.log(`[Calendar API] Request for city: "${city}"`)
     const decodedCity = decodeURIComponent(city)
+    console.log(`[Calendar API] Decoded city: "${decodedCity}"`)
     const citySlug = decodedCity.toLowerCase().replace(/\s+/g, "-")
+    console.log(`[Calendar API] City slug: "${citySlug}"`)
 
     let icsContent: string
 
