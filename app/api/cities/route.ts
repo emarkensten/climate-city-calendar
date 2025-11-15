@@ -24,7 +24,7 @@ export async function GET() {
       lastUpdated: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("[v0] Error fetching cities:", error)
+    console.error("[API] Error fetching cities:", error)
     return NextResponse.json({ error: "Failed to fetch calendar data" }, { status: 500 })
   }
 }

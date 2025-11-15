@@ -13,9 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Automatic updates via ISR (1-week caching strategy)
 - Multi-platform setup instructions (Google Calendar, iPhone/iOS, Outlook)
 - Responsive design
-- Built with v0.app
 
-**Live Deployment:** [Vercel](https://vercel.com/erik-markenstens-projects/v0-swedish-city-calendar)
+**Live Deployment:** Vercel
 
 ---
 
@@ -39,7 +38,7 @@ npm run lint
 
 # Debug: Inspect ICS structure
 npm run dev
-# Then use v0 UI to run scripts/inspect-ics.ts
+# Then run scripts/inspect-ics.ts using development tools
 ```
 
 ---
@@ -87,12 +86,31 @@ npm run dev
 - **Benefit**: Reduces load on klimatkalendern.nu; fast responses for all users
 - **Update Trigger**: Request-driven (when users or calendar apps fetch the URL)
 
+### Automated Data Refresh (GitHub Actions)
+
+- **Workflow**: `.github/workflows/refresh-calendar-data.yml`
+- **Schedule**: Runs daily at 06:00 UTC (07:00/08:00 Swedish time)
+- **Process**:
+  1. Fetches list of all available cities from `/api/cities`
+  2. Loops through each city and requests `/api/calendar/[city]`
+  3. Triggers ISR cache revalidation for all endpoints
+  4. Logs success/failure for each city
+- **Configuration**: Requires `APP_URL` GitHub secret (production URL)
+- **Benefit**: Ensures data is max 24 hours old, independent of user traffic
+- **Manual trigger**: Can be run manually from GitHub Actions UI
+
+See `.github/workflows/README.md` for setup instructions.
+
 ---
 
 ## Project Structure
 
 ```
 climate-city-calendar/
+├── .github/
+│   └── workflows/
+│       ├── refresh-calendar-data.yml     # Daily automated data refresh
+│       └── README.md                     # GitHub Actions documentation
 ├── app/
 │   ├── api/
 │   │   ├── calendar/[city]/route.ts      # Generates ICS files for city
@@ -366,5 +384,3 @@ Users selecting "Stockholm" now get events from entire metropolitan area automat
 7. **No test framework**: Currently no Jest/Vitest setup. Manual testing via `npm run dev` and browser.
 
 8. **TypeScript is strict but permissive in build**: `tsconfig.json` has strict mode, but `next.config.mjs` ignores errors during build. Fix all TypeScript errors before committing.
-
-9. **v0.app origin**: This project was created with v0.app. Some components and structure follow v0 conventions.

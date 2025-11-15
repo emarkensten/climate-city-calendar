@@ -1,0 +1,82 @@
+name: Refresh Calendar Data
+
+on:
+  # Kör dagligen kl 06:00 UTC (07:00/08:00 svensk tid)
+  schedule:
+    - cron: '0 6 * * *'
+
+  # Tillåt manuell körning från GitHub Actions-fliken
+  workflow_dispatch:
+
+jobs:
+  refresh-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch available cities
+        id: fetch-cities
+        run: |
+          echo "Fetching list of cities..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/cities")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Failed to fetch cities (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          echo "✅ Successfully fetched cities"
+          echo "$BODY" | jq -r '.cities[]' > cities.txt
+          CITY_COUNT=$(wc -l < cities.txt)
+          echo "Found $CITY_COUNT cities"
+          echo "city_count=$CITY_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Refresh city calendars
+        run: |
+          echo "Refreshing calendars for all cities..."
+          SUCCESS=0
+          FAILED=0
+
+          while IFS= read -r city; do
+            echo "Processing: $city"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.APP_URL }}/api/calendar/$city")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "  ✅ $city (HTTP $HTTP_CODE)"
+              SUCCESS=$((SUCCESS + 1))
+            else
+              echo "  ❌ $city (HTTP $HTTP_CODE)"
+              FAILED=$((FAILED + 1))
+            fi
+          done < cities.txt
+
+          echo ""
+          echo "========================================="
+          echo "Refresh complete!"
+          echo "✅ Successful: $SUCCESS"
+          echo "❌ Failed: $FAILED"
+          echo "========================================="
+
+          if [ $FAILED -gt 0 ]; then
+            echo "⚠️  Some cities failed to refresh"
+            exit 1
+          fi
+
+      - name: Verify cities endpoint cache
+        run: |
+          echo "Verifying /api/cities cache is fresh..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.APP_URL }}/api/cities")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Cities endpoint verified (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Cities endpoint verification failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "📅 Calendar data refresh completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "🌍 Processed ${{ steps.fetch-cities.outputs.city_count }} cities"

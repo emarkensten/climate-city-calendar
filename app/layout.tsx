@@ -7,9 +7,9 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Swedish City Calendar - Klimatkalendern.nu",
+  description: "Prenumerera på klimatevent i din stad. Filtrerade kalendrar från klimatkalendern.nu för alla svenska städer.",
+  generator: "Next.js",
 }
 
 export default function RootLayout({

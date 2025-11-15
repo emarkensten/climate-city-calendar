@@ -1,7 +1,7 @@
 # Swedish City Calendar
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/erik-markenstens-projects/v0-swedish-city-calendar)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/ZHybRRl1P40)
+![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)
+[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 
 En Next.js-app som hämtar klimathändelser från [klimatkalendern.nu](https://klimatkalendern.nu), filtrerar dem per svensk stad, och genererar anpassade ICS-kalenderfiler som kan prenumereras på i Google Calendar, Outlook, eller andra kalenderapplikationer.
 
@@ -99,7 +99,7 @@ Projektet är konfigurerat för Vercel:
 2. Importera projektet i Vercel
 3. Deploy automatiskt
 
-**Live deployment:** [https://vercel.com/erik-markenstens-projects/v0-swedish-city-calendar](https://vercel.com/erik-markenstens-projects/v0-swedish-city-calendar)
+**Live deployment:** Deployed on Vercel
 
 ## API Endpoints
 
@@ -178,7 +178,7 @@ För att se hur ICS-filen är strukturerad:
 
 \`\`\`bash
 npm run dev
-# Kör scripts/inspect-ics.ts från v0 UI
+# Använd utvecklingsverktyg för att köra scripts/inspect-ics.ts
 \`\`\`
 
 ### Tillgängliga städer
@@ -204,10 +204,6 @@ Uppdatera `revalidate` värdet i API routes (i sekunder):
 - 1 timme: `3600`
 - 1 dag: `86400`
 - 1 vecka: `604800` (nuvarande)
-
-## Fortsätt bygga
-
-Fortsätt utveckla appen på [v0.app](https://v0.app/chat/projects/ZHybRRl1P40)
 
 ## Licens
 

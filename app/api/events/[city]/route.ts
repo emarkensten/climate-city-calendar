@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
       events: filteredEvents.slice(0, 10), // Return first 10 for preview
     })
   } catch (error) {
-    console.error("[v0] Error fetching events:", error)
+    console.error("[API] Error fetching events:", error)
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })
   }
 }
