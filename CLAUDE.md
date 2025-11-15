@@ -13,9 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Automatic updates via ISR (1-week caching strategy)
 - Multi-platform setup instructions (Google Calendar, iPhone/iOS, Outlook)
 - Responsive design
-- Built with v0.app
 
-**Live Deployment:** [Vercel](https://vercel.com/erik-markenstens-projects/v0-swedish-city-calendar)
+**Live Deployment:** Vercel
 
 ---
 
@@ -39,7 +38,7 @@ npm run lint
 
 # Debug: Inspect ICS structure
 npm run dev
-# Then use v0 UI to run scripts/inspect-ics.ts
+# Then run scripts/inspect-ics.ts using development tools
 ```
 
 ---
@@ -385,5 +384,3 @@ Users selecting "Stockholm" now get events from entire metropolitan area automat
 7. **No test framework**: Currently no Jest/Vitest setup. Manual testing via `npm run dev` and browser.
 
 8. **TypeScript is strict but permissive in build**: `tsconfig.json` has strict mode, but `next.config.mjs` ignores errors during build. Fix all TypeScript errors before committing.
-
-9. **v0.app origin**: This project was created with v0.app. Some components and structure follow v0 conventions.
