@@ -40,7 +40,9 @@ jobs:
 
           while IFS= read -r city; do
             echo "Processing: $city"
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.APP_URL }}/api/calendar/$city")
+            # URL-encode the city name to handle Swedish characters (å, ä, ö)
+            ENCODED_CITY=$(printf %s "$city" | jq -sRr @uri)
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.APP_URL }}/api/calendar/$ENCODED_CITY")
 
             if [ "$HTTP_CODE" = "200" ]; then
               echo "  ✅ $city (HTTP $HTTP_CODE)"

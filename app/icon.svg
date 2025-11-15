@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Gradient background -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="url(#grad)"/>
+
+  <!-- Calendar icon -->
+  <rect x="25" y="30" width="50" height="45" rx="4" fill="white"/>
+  <rect x="25" y="30" width="50" height="12" rx="4" fill="#047857"/>
+
+  <!-- Calendar grid -->
+  <line x1="35" y1="50" x2="35" y2="70" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="50" y1="50" x2="50" y2="70" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="65" y1="50" x2="65" y2="70" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="28" y1="55" x2="72" y2="55" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="28" y1="62" x2="72" y2="62" stroke="#10b981" stroke-width="1.5"/>
+
+  <!-- Calendar binding rings -->
+  <circle cx="35" cy="32" r="2" fill="white"/>
+  <circle cx="65" cy="32" r="2" fill="white"/>
+</svg>
