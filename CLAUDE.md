@@ -87,12 +87,31 @@ npm run dev
 - **Benefit**: Reduces load on klimatkalendern.nu; fast responses for all users
 - **Update Trigger**: Request-driven (when users or calendar apps fetch the URL)
 
+### Automated Data Refresh (GitHub Actions)
+
+- **Workflow**: `.github/workflows/refresh-calendar-data.yml`
+- **Schedule**: Runs daily at 06:00 UTC (07:00/08:00 Swedish time)
+- **Process**:
+  1. Fetches list of all available cities from `/api/cities`
+  2. Loops through each city and requests `/api/calendar/[city]`
+  3. Triggers ISR cache revalidation for all endpoints
+  4. Logs success/failure for each city
+- **Configuration**: Requires `APP_URL` GitHub secret (production URL)
+- **Benefit**: Ensures data is max 24 hours old, independent of user traffic
+- **Manual trigger**: Can be run manually from GitHub Actions UI
+
+See `.github/workflows/README.md` for setup instructions.
+
 ---
 
 ## Project Structure
 
 ```
 climate-city-calendar/
+├── .github/
+│   └── workflows/
+│       ├── refresh-calendar-data.yml     # Daily automated data refresh
+│       └── README.md                     # GitHub Actions documentation
 ├── app/
 │   ├── api/
 │   │   ├── calendar/[city]/route.ts      # Generates ICS files for city
