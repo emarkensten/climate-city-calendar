@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
 export const alt = 'Klimatkalendern - Klimatevent i din stad'
 export const size = {
   width: 1200,
