@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download, Loader2, MapPin, Copy, Check } from "lucide-react"
-import { getMainCityFromSuburb } from "@/lib/ics-parser"
+import { getMainCityFromSuburb, findCityByName } from "@/lib/ics-parser"
 
 interface CityData {
   name: string
@@ -38,10 +38,8 @@ export default function Home() {
             // Try to map suburb to main city (e.g., Solna → Stockholm)
             const mainCity = getMainCityFromSuburb(locationData.city)
 
-            // Check if detected city (or its main city) exists in available cities
-            const matchedCity = availableCities.find(
-              (city) => city.name.toLowerCase() === mainCity.toLowerCase(),
-            )
+            // Find city using normalized comparison (handles Vercel's ASCII names like "Malmo" → "Malmö")
+            const matchedCity = findCityByName(mainCity, availableCities)
 
             if (matchedCity) {
               setSelectedCity(matchedCity.name)
@@ -102,9 +100,9 @@ export default function Home() {
           <div className="inline-flex items-center justify-center mb-4">
             <img src="/icon.svg" alt="Klimatkalendern logo" className="w-20 h-20" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-3 text-balance">Klimatkalendern för din stad</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-3 text-balance">Klimatkalendern för din kommun</h1>
           <p className="text-lg text-muted-foreground text-pretty">
-            Filtrera klimathändelser efter stad och prenumerera på dem i din kalender
+            Filtrera klimathändelser efter kommun och prenumerera på dem i din kalender
           </p>
         </div>
 
@@ -113,16 +111,13 @@ export default function Home() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" />
-              Välj din stad
+              Välj din kommun
             </CardTitle>
-            <CardDescription>Välj en stad för att se klimathändelser i ditt område</CardDescription>
+            <CardDescription>Välj en kommun för att se klimathändelser i ditt område</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* City Selector */}
             <div className="space-y-2">
-              <label htmlFor="city-select" className="text-sm font-medium">
-                Kommun
-              </label>
               <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
                 <SelectTrigger id="city-select" className="w-full">
                   <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />

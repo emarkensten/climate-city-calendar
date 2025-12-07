@@ -384,20 +384,48 @@ function escapeICS(text: string): string {
 }
 
 /**
+ * Normalizes Swedish characters to ASCII equivalents for comparison
+ * Handles both directions: "Malmö" → "malmo" and "Malmo" → "malmo"
+ */
+function normalizeSwedish(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/å/g, "a")
+    .replace(/ä/g, "a")
+    .replace(/ö/g, "o")
+    .replace(/é/g, "e")
+}
+
+/**
  * Maps a suburb/municipality to its main city if it exists in CITY_ALIASES
  * For example: "Solna" → "Stockholm", "Partille" → "Göteborg"
  * Returns the original city name if no alias mapping exists
  */
 export function getMainCityFromSuburb(cityName: string): string {
-  const cityLower = cityName.toLowerCase()
+  const cityNormalized = normalizeSwedish(cityName)
 
   // Check each main city's aliases
   for (const [mainCity, suburbs] of Object.entries(CITY_ALIASES)) {
-    if (suburbs.some((suburb) => suburb.toLowerCase() === cityLower)) {
+    if (suburbs.some((suburb) => normalizeSwedish(suburb) === cityNormalized)) {
       return mainCity
     }
   }
 
   // Return original city if no alias found
   return cityName
+}
+
+/**
+ * Finds a city in the available cities list, handling Vercel's ASCII city names
+ * For example: "Malmo" will match "Malmö", "Goteborg" will match "Göteborg"
+ */
+export function findCityByName(
+  detectedCity: string,
+  availableCities: Array<{ name: string; count: number }>
+): { name: string; count: number } | undefined {
+  const normalizedDetected = normalizeSwedish(detectedCity)
+
+  return availableCities.find(
+    (city) => normalizeSwedish(city.name) === normalizedDetected
+  )
 }
