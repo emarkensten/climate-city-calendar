@@ -7,12 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download, Loader2, MapPin, Copy, Check } from "lucide-react"
+import { getMainCityFromSuburb } from "@/lib/ics-parser"
+
+interface CityData {
+  name: string
+  count: number
+}
 
 export default function Home() {
-  const [cities, setCities] = useState<string[]>([])
+  const [cities, setCities] = useState<CityData[]>([])
   const [selectedCity, setSelectedCity] = useState<string>("")
   const [eventCount, setEventCount] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
   const [citiesLoading, setCitiesLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
@@ -21,7 +26,7 @@ export default function Home() {
       try {
         const response = await fetch("/api/cities")
         const data = await response.json()
-        const availableCities = data.cities || []
+        const availableCities: CityData[] = data.cities || []
         setCities(availableCities)
 
         // Try to auto-detect user's city from IP
@@ -30,13 +35,16 @@ export default function Home() {
           const locationData = await locationResponse.json()
 
           if (locationData.city) {
-            // Check if detected city exists in available cities (case-insensitive)
+            // Try to map suburb to main city (e.g., Solna → Stockholm)
+            const mainCity = getMainCityFromSuburb(locationData.city)
+
+            // Check if detected city (or its main city) exists in available cities
             const matchedCity = availableCities.find(
-              (city: string) => city.toLowerCase() === locationData.city.toLowerCase(),
+              (city) => city.name.toLowerCase() === mainCity.toLowerCase(),
             )
 
             if (matchedCity) {
-              setSelectedCity(matchedCity)
+              setSelectedCity(matchedCity.name)
             }
           }
         } catch (error) {
@@ -52,28 +60,18 @@ export default function Home() {
     fetchCities()
   }, [])
 
-  // Fetch event count when city is selected
+  // Set event count from cities data when city is selected
   useEffect(() => {
     if (!selectedCity) {
       setEventCount(null)
       return
     }
 
-    async function fetchEventCount() {
-      setLoading(true)
-      try {
-        const response = await fetch(`/api/events/${encodeURIComponent(selectedCity)}`)
-        const data = await response.json()
-        setEventCount(data.count || 0) // Now correctly matches API response
-      } catch (error) {
-        console.error("Failed to fetch event count:", error)
-        setEventCount(0)
-      } finally {
-        setLoading(false)
-      }
+    const cityData = cities.find((c) => c.name === selectedCity)
+    if (cityData) {
+      setEventCount(cityData.count)
     }
-    fetchEventCount()
-  }, [selectedCity])
+  }, [selectedCity, cities])
 
   const handleCopy = async () => {
     if (!selectedCity) return
@@ -130,32 +128,28 @@ export default function Home() {
                   <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {cities.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
+                  {cities.map((cityData) => (
+                    <SelectItem key={cityData.name} value={cityData.name}>
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <span>{cityData.name}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {cityData.count} {cityData.count === 1 ? "händelse" : "händelser"}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {cities.length} kommuner har klimathändelser
-              </p>
+              <p className="text-xs text-muted-foreground">{cities.length} kommuner har klimathändelser</p>
             </div>
 
             {/* Event Count */}
-            {selectedCity && (
+            {selectedCity && eventCount !== null && (
               <div className="p-4 rounded-lg bg-muted/50 border">
-                {loading ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Räknar händelser...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-primary">{eventCount} händelser</p>
-                    <p className="text-sm text-muted-foreground">Tillgängliga i {selectedCity}</p>
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <p className="text-2xl font-bold text-primary">{eventCount} händelser</p>
+                  <p className="text-sm text-muted-foreground">Tillgängliga i {selectedCity}</p>
+                </div>
               </div>
             )}
 
@@ -284,13 +278,7 @@ export default function Home() {
 
                 {/* Download Alternative */}
                 <div className="pt-2">
-                  <Button
-                    onClick={handleDownload}
-                    variant="outline"
-                    className="w-full bg-transparent"
-                    size="lg"
-                    disabled={loading}
-                  >
+                  <Button onClick={handleDownload} variant="outline" className="w-full bg-transparent" size="lg">
                     <Download className="w-4 h-4 mr-2" />
                     Eller ladda ner som ICS-fil
                   </Button>
@@ -298,7 +286,7 @@ export default function Home() {
               </div>
             )}
 
-            {selectedCity && eventCount === 0 && !loading && (
+            {selectedCity && eventCount === 0 && (
               <div className="text-center py-4 text-muted-foreground">
                 <p>Inga händelser hittades för {selectedCity}</p>
               </div>

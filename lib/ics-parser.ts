@@ -382,3 +382,22 @@ function formatICSDate(date: Date, isAllDay = false): string {
 function escapeICS(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n")
 }
+
+/**
+ * Maps a suburb/municipality to its main city if it exists in CITY_ALIASES
+ * For example: "Solna" → "Stockholm", "Partille" → "Göteborg"
+ * Returns the original city name if no alias mapping exists
+ */
+export function getMainCityFromSuburb(cityName: string): string {
+  const cityLower = cityName.toLowerCase()
+
+  // Check each main city's aliases
+  for (const [mainCity, suburbs] of Object.entries(CITY_ALIASES)) {
+    if (suburbs.some((suburb) => suburb.toLowerCase() === cityLower)) {
+      return mainCity
+    }
+  }
+
+  // Return original city if no alias found
+  return cityName
+}

@@ -18,14 +18,20 @@ export async function GET() {
     const icsContent = await response.text()
     const { cities: mentionedCities, events } = parseICS(icsContent)
 
-    // Only return cities that actually have events when filtered
-    const citiesWithEvents = mentionedCities.filter((city) => {
-      const filtered = filterEventsByCity(events, city)
-      return filtered.length > 0
-    })
+    // Build array with city name and event count
+    const citiesWithCounts = mentionedCities
+      .map((city) => {
+        const filtered = filterEventsByCity(events, city)
+        return {
+          name: city,
+          count: filtered.length,
+        }
+      })
+      .filter((cityData) => cityData.count > 0)
+      .sort((a, b) => a.name.localeCompare(b.name, "sv")) // Sort alphabetically (Swedish locale)
 
     return NextResponse.json({
-      cities: citiesWithEvents,
+      cities: citiesWithCounts,
       totalEvents: events.length,
       lastUpdated: new Date().toISOString(),
     })
