@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Automatic city detection via IP geolocation (Vercel edge runtime)
 - City-based event filtering from a master ICS feed
 - ICS calendar file generation for calendar subscriptions
-- Automatic updates via ISR (1-week caching strategy)
+- Automatic updates via ISR (24-hour caching strategy)
 - Multi-platform setup instructions (Google Calendar, iPhone/iOS, Outlook)
 - Responsive design
 
@@ -63,7 +63,7 @@ npm run dev
 │  - /api/calendar/[city] (ICS)   │
 └────────────┬────────────────────┘
              │
-             ▼ (1-week ISR cache)
+             ▼ (24h ISR cache)
 ┌─────────────────────────────────┐
 │  klimatkalendern.nu ICS Feed    │
 │  (Original climate events)       │
@@ -76,30 +76,15 @@ npm run dev
 2. **Parse Phase**: ICS content parsed into event objects; Swedish cities auto-extracted
 3. **Filter Phase**: Events filtered by selected city (searches: location, summary, description)
 4. **Generate Phase**: Valid ICS file generated from filtered events
-5. **Cache Phase**: Result cached on Vercel edge for 1 week (ISR with stale-while-revalidate)
+5. **Cache Phase**: Result cached on Vercel edge for 24 hours (ISR with stale-while-revalidate)
 
 ### Caching Strategy
 
 - **Method**: Next.js ISR (Incremental Static Regeneration)
-- **Duration**: 1 week (`revalidate: 604800` seconds)
-- **Behavior**: After 1 week, edge serves stale data while fetching fresh data
+- **Duration**: 24 hours (`revalidate: 86400` seconds)
+- **Behavior**: After 24h, edge serves stale data while fetching fresh data
 - **Benefit**: Reduces load on klimatkalendern.nu; fast responses for all users
 - **Update Trigger**: Request-driven (when users or calendar apps fetch the URL)
-
-### Automated Data Refresh (GitHub Actions)
-
-- **Workflow**: `.github/workflows/refresh-calendar-data.yml`
-- **Schedule**: Runs daily at 06:00 UTC (07:00/08:00 Swedish time)
-- **Process**:
-  1. Fetches list of all available cities from `/api/cities`
-  2. Loops through each city and requests `/api/calendar/[city]`
-  3. Triggers ISR cache revalidation for all endpoints
-  4. Logs success/failure for each city
-- **Configuration**: Requires `APP_URL` GitHub secret (production URL)
-- **Benefit**: Ensures data is max 24 hours old, independent of user traffic
-- **Manual trigger**: Can be run manually from GitHub Actions UI
-
-See `.github/workflows/README.md` for setup instructions.
 
 ---
 
@@ -109,8 +94,7 @@ See `.github/workflows/README.md` for setup instructions.
 climate-city-calendar/
 ├── .github/
 │   └── workflows/
-│       ├── refresh-calendar-data.yml     # Daily automated data refresh
-│       └── README.md                     # GitHub Actions documentation
+│       └── refresh-calendar-data.yml     # Optional: Daily data refresh trigger
 ├── app/
 │   ├── api/
 │   │   ├── calendar/[city]/route.ts      # Generates ICS files for city
@@ -167,7 +151,7 @@ climate-city-calendar/
 
 **Data:**
 
-- `SWEDISH_CITIES` - Array of ~40 major Swedish cities used for matching/fallback
+- `SWEDISH_CITIES` - Array of all 290 Swedish municipalities (from SKR)
 
 **Helpers:**
 - `processField()` - Parses individual ICS field lines
@@ -202,7 +186,7 @@ climate-city-calendar/
 
 ### API Routes
 
-All API routes implement ISR caching with `revalidate: 604800` (1 week)
+All API routes implement ISR caching with `revalidate: 86400` (24 hours)
 
 - **`/api/cities`** - Fetches all available cities; returns `{ cities, totalEvents }`
 - **`/api/location`** - IP geolocation (edge runtime); returns city if in Sweden
@@ -261,19 +245,19 @@ All API routes implement ISR caching with `revalidate: 604800` (1 week)
 
 1. Create file: `app/api/[route]/route.ts`
 2. Export async `GET` or `POST` function
-3. Add `export const revalidate = 604800` for caching
+3. Add `export const revalidate = 86400` for caching (24h)
 4. Return `NextResponse` with appropriate headers
 
 ### Modifying cache duration
 
 Find `revalidate` in API routes and adjust (in seconds):
 - 1 hour: `3600`
-- 1 day: `86400`
-- 1 week: `604800` (current)
+- 1 day: `86400` (current)
+- 1 week: `604800`
 
 ### Adding a city manually
 
-Update `SWEDISH_CITIES` array in `lib/ics-parser.ts`. Cities are auto-extracted but this is the fallback list.
+All 290 Swedish municipalities are already included in `SWEDISH_CITIES` array in `lib/ics-parser.ts`. The list is sourced from SKR (Sveriges Kommuner och Regioner).
 
 ### Debugging ICS parsing
 
@@ -344,12 +328,11 @@ The following critical issues were identified and fixed:
 **Problem**: Reusing original UIDs caused conflicts if user subscribed to both original and filtered calendar
 **Solution**: Generate unique UIDs: `{originalUID}-filtered-{citySlug}`
 
-### 6. ✅ Network Error Handling with Fallback
+### 6. ✅ Network Error Handling
 **Problem**: If klimatkalendern.nu is down, calendar completely fails
 **Solution**:
 - 10-second timeout for fetch requests
-- In-memory cache of last successful fetch (max 2 weeks old)
-- Fallback to cached data if source is unavailable
+- ISR cache ensures stale data is served while revalidating
 - Enhanced error logging
 
 ### 7. ✅ Recurring Events Support (RRULE)
@@ -369,13 +352,13 @@ Users selecting "Stockholm" now get events from entire metropolitan area automat
 
 ## Notes for Claude Code Instances
 
-1. **Caching is critical**: The 1-week ISR cache is essential for performance. Don't remove `revalidate` without understanding impact.
+1. **Caching is critical**: The 24h ISR cache is essential for performance. Don't remove `revalidate` without understanding impact.
 
 2. **ICS format is strict**: RFC 5545 requires specific formatting (`\r\n` delimiters, escape sequences). Test after modifying ICS generation.
 
 3. **City matching uses word boundaries**: The parser searches multiple fields (location, summary, description) with word-boundary regex. Case-insensitive for better UX.
 
-4. **Fallback mechanism**: In-memory cache (`lastKnownGoodData`) provides resilience when source API fails. Max age: 2 weeks.
+4. **All 290 municipalities supported**: `SWEDISH_CITIES` contains all Swedish municipalities from SKR.
 
 5. **Unique UIDs prevent conflicts**: Filtered calendars use modified UIDs to avoid duplicates with original calendar.
 

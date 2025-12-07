@@ -3,10 +3,9 @@ import { parseICS, filterEventsByCity, generateICS } from "@/lib/ics-parser"
 
 const ICS_FEED_URL = "https://klimatkalendern.nu/feed/instance/ics"
 
-export const revalidate = 604800 // Cache for 1 week
-
-// In-memory cache for fallback when source is unavailable
-let lastKnownGoodData: { icsContent: string; timestamp: number } | null = null
+// Cache for 24 hours - simple and predictable
+// Data updates daily, so users always get reasonably fresh data
+export const revalidate = 86400
 
 export async function GET(request: Request, { params }: { params: Promise<{ city: string }> }) {
   try {
@@ -23,42 +22,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
       .replace(/\s+/g, "-")
     console.log(`[Calendar API] City slug: "${citySlug}"`)
 
-    let icsContent: string
+    // Fetch ICS data with timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    try {
-      // Try to fetch fresh data with timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const response = await fetch(ICS_FEED_URL, {
+      next: { revalidate: 86400 }, // 24 hours
+      signal: controller.signal,
+    })
 
-      const response = await fetch(ICS_FEED_URL, {
-        next: { revalidate: 604800 },
-        signal: controller.signal,
-      })
+    clearTimeout(timeoutId)
 
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      icsContent = await response.text()
-
-      // Store as fallback for future failures
-      lastKnownGoodData = {
-        icsContent,
-        timestamp: Date.now(),
-      }
-    } catch (fetchError) {
-      console.error("[Calendar API] Error fetching ICS feed:", fetchError)
-
-      // Use fallback data if available and not too old (max 2 weeks old)
-      if (lastKnownGoodData && Date.now() - lastKnownGoodData.timestamp < 14 * 24 * 60 * 60 * 1000) {
-        console.log("[Calendar API] Using fallback data from", new Date(lastKnownGoodData.timestamp))
-        icsContent = lastKnownGoodData.icsContent
-      } else {
-        throw new Error("Unable to fetch calendar data and no valid fallback available")
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
+
+    const icsContent = await response.text()
 
     const { events } = parseICS(icsContent)
     const filteredEvents = filterEventsByCity(events, decodedCity)
@@ -74,7 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
         "Content-Disposition": `inline; filename="klimatkalendern-${citySlug}.ics"`,
-        "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400", // 1 week cache, 1 day stale
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=3600", // 24h cache, 1h stale
         "Access-Control-Allow-Origin": "*", // Allow CORS for calendar apps
       },
     })

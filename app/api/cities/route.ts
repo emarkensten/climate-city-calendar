@@ -3,12 +3,12 @@ import { parseICS } from "@/lib/ics-parser"
 
 const ICS_FEED_URL = "https://klimatkalendern.nu/feed/instance/ics"
 
-export const revalidate = 604800 // Cache for 1 week (7 days * 24 hours * 60 minutes * 60 seconds)
+export const revalidate = 86400 // Cache for 24 hours
 
 export async function GET() {
   try {
     const response = await fetch(ICS_FEED_URL, {
-      next: { revalidate: 604800 },
+      next: { revalidate: 86400 },
     })
 
     if (!response.ok) {
