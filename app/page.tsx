@@ -156,10 +156,17 @@ export default function Home() {
                           <CommandItem
                             key={city}
                             value={city}
-                            onSelect={() => {
-                              setSelectedCity(city)
+                            onSelect={(currentValue) => {
+                              // cmdk returns lowercase, find original case
+                              const selected = cities.find(
+                                (c) => c.toLowerCase() === currentValue.toLowerCase()
+                              )
+                              if (selected) {
+                                setSelectedCity(selected)
+                              }
                               setOpen(false)
                             }}
+                            className="cursor-pointer"
                           >
                             <Check
                               className={cn(
