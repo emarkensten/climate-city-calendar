@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { Download, Loader2, MapPin, Copy, Check } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Download, Loader2, MapPin, Copy, Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function Home() {
   const [cities, setCities] = useState<string[]>([])
@@ -15,6 +17,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [citiesLoading, setCitiesLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     async function fetchCities() {
@@ -123,20 +126,58 @@ export default function Home() {
             {/* City Selector */}
             <div className="space-y-2">
               <label htmlFor="city-select" className="text-sm font-medium">
-                Stad
+                Kommun
               </label>
-              <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
-                <SelectTrigger id="city-select" className="w-full">
-                  <SelectValue placeholder={citiesLoading ? "Laddar städer..." : "Välj en stad"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="city-select"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between font-normal"
+                    disabled={citiesLoading}
+                  >
+                    {citiesLoading
+                      ? "Laddar kommuner..."
+                      : selectedCity
+                        ? selectedCity
+                        : "Sök eller välj kommun..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Sök kommun..." />
+                    <CommandList>
+                      <CommandEmpty>Ingen kommun hittades.</CommandEmpty>
+                      <CommandGroup>
+                        {cities.map((city) => (
+                          <CommandItem
+                            key={city}
+                            value={city}
+                            onSelect={() => {
+                              setSelectedCity(city)
+                              setOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCity === city ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {city}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Visar {cities.length} kommuner med klimathändelser
+              </p>
             </div>
 
             {/* Event Count */}
@@ -316,7 +357,7 @@ export default function Home() {
               klimatkalendern.nu
             </a>
           </p>
-          <p className="mt-1">Uppdateras varje vecka</p>
+          <p className="mt-1">Uppdateras dagligen</p>
         </div>
       </div>
     </main>
