@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { parseICS } from "@/lib/ics-parser"
+import { parseICS, filterEventsByCity } from "@/lib/ics-parser"
 
 const ICS_FEED_URL = "https://klimatkalendern.nu/feed/instance/ics"
 
@@ -16,10 +16,16 @@ export async function GET() {
     }
 
     const icsContent = await response.text()
-    const { cities, events } = parseICS(icsContent)
+    const { cities: mentionedCities, events } = parseICS(icsContent)
+
+    // Only return cities that actually have events when filtered
+    const citiesWithEvents = mentionedCities.filter((city) => {
+      const filtered = filterEventsByCity(events, city)
+      return filtered.length > 0
+    })
 
     return NextResponse.json({
-      cities,
+      cities: citiesWithEvents,
       totalEvents: events.length,
       lastUpdated: new Date().toISOString(),
     })
