@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download, Loader2, MapPin, Copy, Check } from "lucide-react"
+import { Loader2, MapPin, Copy, Check } from "lucide-react"
 import { getMainCityFromSuburb, findCityByName } from "@/lib/ics-parser"
 
 interface CityData {
@@ -81,11 +81,6 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to copy:", error)
     }
-  }
-
-  const handleDownload = () => {
-    if (!selectedCity) return
-    window.open(`/api/calendar/${encodeURIComponent(selectedCity)}`, "_blank")
   }
 
   const calendarUrl = selectedCity
@@ -270,14 +265,6 @@ export default function Home() {
                     </div>
                   </TabsContent>
                 </Tabs>
-
-                {/* Download Alternative */}
-                <div className="pt-2">
-                  <Button onClick={handleDownload} variant="outline" className="w-full bg-transparent" size="lg">
-                    <Download className="w-4 h-4 mr-2" />
-                    Eller ladda ner som ICS-fil
-                  </Button>
-                </div>
               </div>
             )}
 
