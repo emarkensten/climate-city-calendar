@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
     const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
     const response = await fetch(ICS_FEED_URL, {
-      next: { revalidate: 86400 }, // 24 hours
+      cache: "no-store", // Don't cache fetch - let route-level revalidate handle caching
       signal: controller.signal,
     })
 

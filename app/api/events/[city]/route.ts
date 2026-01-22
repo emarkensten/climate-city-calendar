@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
     const { city } = await params
 
     const response = await fetch(ICS_FEED_URL, {
-      next: { revalidate: 86400 },
+      cache: "no-store", // Don't cache fetch - let route-level revalidate handle caching
     })
 
     if (!response.ok) {

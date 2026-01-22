@@ -8,7 +8,7 @@ export const revalidate = 86400 // Cache for 24 hours
 export async function GET() {
   try {
     const response = await fetch(ICS_FEED_URL, {
-      next: { revalidate: 86400 },
+      cache: "no-store", // Don't cache fetch - let route-level revalidate handle caching
     })
 
     if (!response.ok) {
