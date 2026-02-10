@@ -115,56 +115,67 @@ export default function Home() {
             <CardDescription>Välj en kommun för att se klimathändelser i ditt område</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* City Selector */}
-            <div className="space-y-2">
-              <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
-                <SelectTrigger id="city-select" className="w-full">
-                  <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((cityData) => (
-                    <SelectItem key={cityData.name} value={cityData.name}>
-                      <div className="flex items-center justify-between w-full gap-3">
-                        <span>{cityData.name}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {cityData.count} {cityData.count === 1 ? "händelse" : "händelser"}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* City Selector - iOS Settings-style grouped list */}
+            <div className="rounded-lg border overflow-hidden">
+              {/* Row 1: City dropdown */}
+              <div className="px-4 py-3">
+                <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
+                  <SelectTrigger id="city-select" className="w-full" aria-label="Välj kommun">
+                    <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((cityData) => (
+                      <SelectItem key={cityData.name} value={cityData.name}>
+                        <div className="flex items-center justify-between w-full gap-3">
+                          <span>{cityData.name}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {cityData.count} {cityData.count === 1 ? "händelse" : "händelser"}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Row 2: Suburbs toggle (only for cities with suburbs) */}
               {selectedCity && getCityAliases(selectedCity).length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={includeSuburbs}
-                      onClick={() => setIncludeSuburbs(!includeSuburbs)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${includeSuburbs ? "bg-primary" : "bg-muted-foreground/30"}`}
-                    >
-                      <span
-                        className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${includeSuburbs ? "translate-x-4" : "translate-x-0"}`}
-                      />
-                    </button>
-                    <span className="text-sm">
-                      Inkluderar {getCityAliases(selectedCity).length}{" "}
+                <>
+                  <div className="border-t" />
+                  <div className="px-4 py-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm">
+                        Inkludera {getCityAliases(selectedCity).length}{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSuburbList(!showSuburbList)}
+                          className="text-primary underline underline-offset-2"
+                          aria-expanded={showSuburbList}
+                          aria-controls="suburb-list"
+                        >
+                          kranskommuner
+                        </button>
+                      </span>
                       <button
                         type="button"
-                        onClick={() => setShowSuburbList(!showSuburbList)}
-                        className="text-primary hover:underline"
+                        role="switch"
+                        aria-checked={includeSuburbs}
+                        aria-label={`Inkludera kranskommuner för ${selectedCity}`}
+                        onClick={() => setIncludeSuburbs(!includeSuburbs)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${includeSuburbs ? "bg-primary" : "bg-muted-foreground/30"}`}
                       >
-                        kranskommuner
+                        <span
+                          className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${includeSuburbs ? "translate-x-4" : "translate-x-0"}`}
+                        />
                       </button>
-                    </span>
-                  </label>
-                  {showSuburbList && (
-                    <p className="text-xs text-muted-foreground pl-12">
-                      {getCityAliases(selectedCity).join(", ")}
-                    </p>
-                  )}
-                </div>
+                    </div>
+                    {showSuburbList && (
+                      <p id="suburb-list" className="text-xs text-muted-foreground">
+                        {getCityAliases(selectedCity).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
 
@@ -193,7 +204,7 @@ export default function Home() {
                       className="font-mono text-sm"
                       onClick={(e) => e.currentTarget.select()}
                     />
-                    <Button onClick={handleCopy} variant="outline" size="icon" className="shrink-0 bg-transparent">
+                    <Button onClick={handleCopy} variant="outline" size="icon" className="shrink-0 bg-transparent" aria-label={copied ? "Kopierad" : "Kopiera kalender-URL"}>
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
@@ -217,7 +228,7 @@ export default function Home() {
                             href="https://calendar.google.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline"
+                            className="text-primary underline underline-offset-2"
                           >
                             Google Calendar
                           </a>{" "}
@@ -282,7 +293,7 @@ export default function Home() {
                             href="https://outlook.live.com/calendar"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline"
+                            className="text-primary underline underline-offset-2"
                           >
                             Outlook Calendar
                           </a>
@@ -319,7 +330,7 @@ export default function Home() {
               href="https://klimatkalendern.nu"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-primary underline underline-offset-2"
             >
               klimatkalendern.nu
             </a>
