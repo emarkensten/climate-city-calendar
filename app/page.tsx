@@ -21,6 +21,7 @@ export default function Home() {
   const [citiesLoading, setCitiesLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [includeSuburbs, setIncludeSuburbs] = useState(true)
+  const [showSuburbList, setShowSuburbList] = useState(false)
   const hasMounted = useRef(false)
 
   useEffect(() => {
@@ -133,21 +134,38 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{cities.length} kommuner har klimathändelser</p>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeSuburbs}
-                  onChange={(e) => setIncludeSuburbs(e.target.checked)}
-                  className="h-4 w-4 rounded border-input accent-primary"
-                />
-                <span className="text-sm">Inkludera kranskommuner</span>
-                {selectedCity && getCityAliases(selectedCity).length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    ({getCityAliases(selectedCity).join(", ")})
-                  </span>
-                )}
-              </label>
+              {selectedCity && getCityAliases(selectedCity).length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={includeSuburbs}
+                      onClick={() => setIncludeSuburbs(!includeSuburbs)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${includeSuburbs ? "bg-primary" : "bg-muted-foreground/30"}`}
+                    >
+                      <span
+                        className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${includeSuburbs ? "translate-x-4" : "translate-x-0"}`}
+                      />
+                    </button>
+                    <span className="text-sm">
+                      Inkluderar {getCityAliases(selectedCity).length}{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowSuburbList(!showSuburbList)}
+                        className="text-primary hover:underline"
+                      >
+                        kranskommuner
+                      </button>
+                    </span>
+                  </label>
+                  {showSuburbList && (
+                    <p className="text-xs text-muted-foreground pl-12">
+                      {getCityAliases(selectedCity).join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Event Count */}
