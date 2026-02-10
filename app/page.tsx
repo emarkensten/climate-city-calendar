@@ -118,25 +118,23 @@ export default function Home() {
             {/* City Selector - iOS Settings-style grouped list */}
             <div className="rounded-lg border overflow-hidden">
               {/* Row 1: City dropdown */}
-              <div className="px-4 py-3">
-                <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
-                  <SelectTrigger id="city-select" className="w-full" aria-label="Välj kommun">
-                    <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map((cityData) => (
-                      <SelectItem key={cityData.name} value={cityData.name}>
-                        <div className="flex items-center justify-between w-full gap-3">
-                          <span>{cityData.name}</span>
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            {cityData.count} {cityData.count === 1 ? "händelse" : "händelser"}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
+                <SelectTrigger id="city-select" className="w-full border-0 shadow-none rounded-none px-4 py-3 h-auto" aria-label="Välj kommun">
+                  <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((cityData) => (
+                    <SelectItem key={cityData.name} value={cityData.name}>
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <span>{cityData.name}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {cityData.count} {cityData.count === 1 ? "händelse" : "händelser"}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Row 2: Suburbs toggle (only for cities with suburbs) */}
               {selectedCity && getCityAliases(selectedCity).length > 0 && (
