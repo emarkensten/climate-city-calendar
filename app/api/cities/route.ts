@@ -4,9 +4,13 @@ import { parseICS, filterEventsByCity } from "@/lib/ics-parser"
 const ICS_FEED_URL = "https://klimatkalendern.nu/feed/instance/ics"
 
 export const revalidate = 86400 // Cache for 24 hours
+export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url)
+    const includeSuburbs = url.searchParams.get("suburbs") !== "0"
+
     const response = await fetch(ICS_FEED_URL, {
       cache: "no-store", // Don't cache fetch - let route-level revalidate handle caching
     })
@@ -21,7 +25,7 @@ export async function GET() {
     // Build array with city name and event count
     const citiesWithCounts = mentionedCities
       .map((city) => {
-        const filtered = filterEventsByCity(events, city)
+        const filtered = filterEventsByCity(events, city, includeSuburbs)
         return {
           name: city,
           count: filtered.length,

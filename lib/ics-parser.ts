@@ -103,7 +103,7 @@ const CITY_ALIASES: Record<string, string[]> = {
     "Tjörn",
     "Götene",
   ],
-  // Malmö and nearest suburbs in Skåne län (33 municipalities)
+  // Malmö and nearest suburbs in Skåne län
   Malmö: [
     "Burlöv",
     "Lomma",
@@ -111,7 +111,6 @@ const CITY_ALIASES: Record<string, string[]> = {
     "Svedala",
     "Vellinge",
     "Kävlinge",
-    "Lund", // Note: Lund has its own events but is also a Malmö suburb
   ],
 }
 
@@ -255,36 +254,50 @@ function unescapeICS(text: string): string {
   return text.replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\")
 }
 
-export function filterEventsByCity(events: CalendarEvent[], city: string): CalendarEvent[] {
+export function filterEventsByCity(events: CalendarEvent[], city: string, includeSuburbs: boolean = true): CalendarEvent[] {
   try {
-    const cityLower = city.toLowerCase()
-
-    // Get all city name variations (main city + suburbs/aliases)
+    // Get all city name variations (main city + optionally suburbs/aliases)
     const cityVariations = [city]
-    const aliases = CITY_ALIASES[city]
-    if (aliases && aliases.length > 0) {
-      cityVariations.push(...aliases)
+    if (includeSuburbs) {
+      const aliases = CITY_ALIASES[city]
+      if (aliases && aliases.length > 0) {
+        cityVariations.push(...aliases)
+      }
     }
 
-    // Create regex pattern matching any of the city variations
-    // Escape special regex characters and use word boundaries to avoid partial matches
-    const escapedCities = cityVariations.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    // Normalize city names to ASCII so \b word boundaries work correctly.
+    // JavaScript's \b treats å, ä, ö as non-word characters, which breaks
+    // matching for cities like "Malmö", "Luleå", "Örebro" etc.
+    const escapedCities = cityVariations.map((c) =>
+      normalizeSwedish(c).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    )
     const cityPattern = escapedCities.join("|")
-    const cityRegex = new RegExp(`\\b(${cityPattern})\\b`, "i")
+    const cityRegex = new RegExp(`\\b(${cityPattern})\\b`)
 
     return events.filter((event) => {
-      const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
+      const searchText = normalizeSwedish(
+        `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
+      )
       return cityRegex.test(searchText)
     })
   } catch (error) {
     console.error(`[filterEventsByCity] Error filtering events for city "${city}":`, error)
-    // Fallback to simple case-insensitive includes check
-    const cityLower = city.toLowerCase()
+    // Fallback to simple normalized includes check
+    const normalized = normalizeSwedish(city)
     return events.filter((event) => {
-      const searchText = `${event.location || ""} ${event.summary || ""} ${event.description || ""}`.toLowerCase()
-      return searchText.includes(cityLower)
+      const searchText = normalizeSwedish(
+        `${event.location || ""} ${event.summary || ""} ${event.description || ""}`
+      )
+      return searchText.includes(normalized)
     })
   }
+}
+
+/**
+ * Returns the list of suburb aliases for a given city, or empty array if none.
+ */
+export function getCityAliases(city: string): string[] {
+  return CITY_ALIASES[city] || []
 }
 
 export function generateICS(events: CalendarEvent[], calendarName: string, citySlug?: string): string {

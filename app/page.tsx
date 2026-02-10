@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, MapPin, Copy, Check } from "lucide-react"
-import { getMainCityFromSuburb, findCityByName } from "@/lib/ics-parser"
+import { getMainCityFromSuburb, findCityByName, getCityAliases } from "@/lib/ics-parser"
 
 interface CityData {
   name: string
@@ -20,34 +20,37 @@ export default function Home() {
   const [eventCount, setEventCount] = useState<number | null>(null)
   const [citiesLoading, setCitiesLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [includeSuburbs, setIncludeSuburbs] = useState(true)
+  const hasMounted = useRef(false)
 
   useEffect(() => {
     async function fetchCities() {
       try {
-        const response = await fetch("/api/cities")
+        setCitiesLoading(true)
+        const suburbsParam = includeSuburbs ? "" : "?suburbs=0"
+        const response = await fetch(`/api/cities${suburbsParam}`)
         const data = await response.json()
         const availableCities: CityData[] = data.cities || []
         setCities(availableCities)
 
-        // Try to auto-detect user's city from IP
-        try {
-          const locationResponse = await fetch("/api/location")
-          const locationData = await locationResponse.json()
+        // Auto-detect user's city from IP only on first mount
+        if (!hasMounted.current) {
+          hasMounted.current = true
+          try {
+            const locationResponse = await fetch("/api/location")
+            const locationData = await locationResponse.json()
 
-          if (locationData.city) {
-            // Try to map suburb to main city (e.g., Solna → Stockholm)
-            const mainCity = getMainCityFromSuburb(locationData.city)
+            if (locationData.city) {
+              const mainCity = getMainCityFromSuburb(locationData.city)
+              const matchedCity = findCityByName(mainCity, availableCities)
 
-            // Find city using normalized comparison (handles Vercel's ASCII names like "Malmo" → "Malmö")
-            const matchedCity = findCityByName(mainCity, availableCities)
-
-            if (matchedCity) {
-              setSelectedCity(matchedCity.name)
+              if (matchedCity) {
+                setSelectedCity(matchedCity.name)
+              }
             }
+          } catch (error) {
+            console.error("Failed to detect location:", error)
           }
-        } catch (error) {
-          console.error("Failed to detect location:", error)
-          // Silently fail - user can still select manually
         }
       } catch (error) {
         console.error("Failed to fetch cities:", error)
@@ -56,7 +59,7 @@ export default function Home() {
       }
     }
     fetchCities()
-  }, [])
+  }, [includeSuburbs])
 
   // Set event count from cities data when city is selected
   useEffect(() => {
@@ -72,8 +75,7 @@ export default function Home() {
   }, [selectedCity, cities])
 
   const handleCopy = async () => {
-    if (!selectedCity) return
-    const calendarUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}`
+    if (!calendarUrl) return
     try {
       await navigator.clipboard.writeText(calendarUrl)
       setCopied(true)
@@ -83,8 +85,9 @@ export default function Home() {
     }
   }
 
+  const suburbsSuffix = includeSuburbs ? "" : "?suburbs=0"
   const calendarUrl = selectedCity
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}${suburbsSuffix}`
     : ""
 
   return (
@@ -131,6 +134,20 @@ export default function Home() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">{cities.length} kommuner har klimathändelser</p>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeSuburbs}
+                  onChange={(e) => setIncludeSuburbs(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                <span className="text-sm">Inkludera kranskommuner</span>
+                {selectedCity && getCityAliases(selectedCity).length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    ({getCityAliases(selectedCity).join(", ")})
+                  </span>
+                )}
+              </label>
             </div>
 
             {/* Event Count */}
