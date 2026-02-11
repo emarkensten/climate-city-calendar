@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, MapPin, Copy, Check } from "lucide-react"
-import { getMainCityFromSuburb, findCityByName } from "@/lib/ics-parser"
+import { getMainCityFromSuburb, findCityByName, getCityAliases } from "@/lib/ics-parser"
 
 interface CityData {
   name: string
@@ -20,34 +20,38 @@ export default function Home() {
   const [eventCount, setEventCount] = useState<number | null>(null)
   const [citiesLoading, setCitiesLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [includeSuburbs, setIncludeSuburbs] = useState(true)
+  const [showSuburbList, setShowSuburbList] = useState(false)
+  const hasMounted = useRef(false)
 
   useEffect(() => {
     async function fetchCities() {
       try {
-        const response = await fetch("/api/cities")
+        setCitiesLoading(true)
+        const suburbsParam = includeSuburbs ? "" : "?suburbs=0"
+        const response = await fetch(`/api/cities${suburbsParam}`)
         const data = await response.json()
         const availableCities: CityData[] = data.cities || []
         setCities(availableCities)
 
-        // Try to auto-detect user's city from IP
-        try {
-          const locationResponse = await fetch("/api/location")
-          const locationData = await locationResponse.json()
+        // Auto-detect user's city from IP only on first mount
+        if (!hasMounted.current) {
+          hasMounted.current = true
+          try {
+            const locationResponse = await fetch("/api/location")
+            const locationData = await locationResponse.json()
 
-          if (locationData.city) {
-            // Try to map suburb to main city (e.g., Solna → Stockholm)
-            const mainCity = getMainCityFromSuburb(locationData.city)
+            if (locationData.city) {
+              const mainCity = getMainCityFromSuburb(locationData.city)
+              const matchedCity = findCityByName(mainCity, availableCities)
 
-            // Find city using normalized comparison (handles Vercel's ASCII names like "Malmo" → "Malmö")
-            const matchedCity = findCityByName(mainCity, availableCities)
-
-            if (matchedCity) {
-              setSelectedCity(matchedCity.name)
+              if (matchedCity) {
+                setSelectedCity(matchedCity.name)
+              }
             }
+          } catch (error) {
+            console.error("Failed to detect location:", error)
           }
-        } catch (error) {
-          console.error("Failed to detect location:", error)
-          // Silently fail - user can still select manually
         }
       } catch (error) {
         console.error("Failed to fetch cities:", error)
@@ -56,7 +60,7 @@ export default function Home() {
       }
     }
     fetchCities()
-  }, [])
+  }, [includeSuburbs])
 
   // Set event count from cities data when city is selected
   useEffect(() => {
@@ -72,8 +76,7 @@ export default function Home() {
   }, [selectedCity, cities])
 
   const handleCopy = async () => {
-    if (!selectedCity) return
-    const calendarUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}`
+    if (!calendarUrl) return
     try {
       await navigator.clipboard.writeText(calendarUrl)
       setCopied(true)
@@ -83,8 +86,9 @@ export default function Home() {
     }
   }
 
+  const suburbsSuffix = includeSuburbs ? "" : "?suburbs=0"
   const calendarUrl = selectedCity
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/${encodeURIComponent(selectedCity)}${suburbsSuffix}`
     : ""
 
   return (
@@ -111,10 +115,11 @@ export default function Home() {
             <CardDescription>Välj en kommun för att se klimathändelser i ditt område</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* City Selector */}
-            <div className="space-y-2">
+            {/* City Selector - iOS Settings-style grouped list */}
+            <div className="rounded-lg border overflow-hidden">
+              {/* Row 1: City dropdown */}
               <Select value={selectedCity} onValueChange={setSelectedCity} disabled={citiesLoading}>
-                <SelectTrigger id="city-select" className="w-full">
+                <SelectTrigger id="city-select" className="w-full border-0 shadow-none rounded-none px-4 py-3 h-auto" aria-label="Välj kommun">
                   <SelectValue placeholder={citiesLoading ? "Laddar kommuner..." : "Välj kommun"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -130,7 +135,46 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{cities.length} kommuner har klimathändelser</p>
+
+              {/* Row 2: Suburbs toggle (only for cities with suburbs) */}
+              {selectedCity && getCityAliases(selectedCity).length > 0 && (
+                <>
+                  <div className="border-t" />
+                  <div className="px-4 py-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm">
+                        Inkludera {getCityAliases(selectedCity).length}{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSuburbList(!showSuburbList)}
+                          className="text-primary underline underline-offset-2"
+                          aria-expanded={showSuburbList}
+                          aria-controls="suburb-list"
+                        >
+                          kranskommuner
+                        </button>
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={includeSuburbs}
+                        aria-label={`Inkludera kranskommuner för ${selectedCity}`}
+                        onClick={() => setIncludeSuburbs(!includeSuburbs)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${includeSuburbs ? "bg-primary" : "bg-muted-foreground/30"}`}
+                      >
+                        <span
+                          className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${includeSuburbs ? "translate-x-4" : "translate-x-0"}`}
+                        />
+                      </button>
+                    </div>
+                    {showSuburbList && (
+                      <p id="suburb-list" className="text-xs text-muted-foreground">
+                        {getCityAliases(selectedCity).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Event Count */}
@@ -158,7 +202,7 @@ export default function Home() {
                       className="font-mono text-sm"
                       onClick={(e) => e.currentTarget.select()}
                     />
-                    <Button onClick={handleCopy} variant="outline" size="icon" className="shrink-0 bg-transparent">
+                    <Button onClick={handleCopy} variant="outline" size="icon" className="shrink-0 bg-transparent" aria-label={copied ? "Kopierad" : "Kopiera kalender-URL"}>
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
@@ -182,7 +226,7 @@ export default function Home() {
                             href="https://calendar.google.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline"
+                            className="text-primary underline underline-offset-2"
                           >
                             Google Calendar
                           </a>{" "}
@@ -247,7 +291,7 @@ export default function Home() {
                             href="https://outlook.live.com/calendar"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline"
+                            className="text-primary underline underline-offset-2"
                           >
                             Outlook Calendar
                           </a>
@@ -284,7 +328,7 @@ export default function Home() {
               href="https://klimatkalendern.nu"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-primary underline underline-offset-2"
             >
               klimatkalendern.nu
             </a>

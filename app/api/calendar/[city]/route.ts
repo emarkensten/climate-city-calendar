@@ -10,7 +10,10 @@ export const revalidate = 86400
 export async function GET(request: Request, { params }: { params: Promise<{ city: string }> }) {
   try {
     const { city } = await params
-    console.log(`[Calendar API] Request for city: "${city}"`)
+    const url = new URL(request.url)
+    const includeSuburbs = url.searchParams.get("suburbs") !== "0"
+
+    console.log(`[Calendar API] Request for city: "${city}", suburbs: ${includeSuburbs}`)
     const decodedCity = decodeURIComponent(city)
     console.log(`[Calendar API] Decoded city: "${decodedCity}"`)
     // Normalize city slug to ASCII-safe characters (å→a, ä→a, ö→o)
@@ -40,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
     const icsContent = await response.text()
 
     const { events } = parseICS(icsContent)
-    const filteredEvents = filterEventsByCity(events, decodedCity)
+    const filteredEvents = filterEventsByCity(events, decodedCity, includeSuburbs)
 
     if (filteredEvents.length === 0) {
       console.warn(`[Calendar API] No events found for city: ${decodedCity}`)

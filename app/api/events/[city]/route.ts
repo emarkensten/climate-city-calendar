@@ -8,6 +8,8 @@ export const revalidate = 86400 // Cache for 24 hours
 export async function GET(request: Request, { params }: { params: Promise<{ city: string }> }) {
   try {
     const { city } = await params
+    const url = new URL(request.url)
+    const includeSuburbs = url.searchParams.get("suburbs") !== "0"
 
     const response = await fetch(ICS_FEED_URL, {
       cache: "no-store", // Don't cache fetch - let route-level revalidate handle caching
@@ -19,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ city
 
     const icsContent = await response.text()
     const { events } = parseICS(icsContent)
-    const filteredEvents = filterEventsByCity(events, decodeURIComponent(city))
+    const filteredEvents = filterEventsByCity(events, decodeURIComponent(city), includeSuburbs)
 
     return NextResponse.json({
       city: decodeURIComponent(city),
